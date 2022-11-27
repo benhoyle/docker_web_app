@@ -8,6 +8,7 @@ The web app is constructed using Docker Compose. Nginx is used as reverse proxy.
 
 The web app is built to support ML processing on a GPU. There is a later option to have a separate celery instance 
 for GPU-enabled ML inference.
+
 ---
 ## Preparation
 I like to use a virtual environment for local development and testing.
@@ -18,8 +19,9 @@ python -m venv venv
 ```
 Then add within Pycharm as an existing local interpreter for development.
 ![img.png](docs/images/img.png)
+
 ---
-## Local Environment vs Dokcer Environment
+### Local Environment vs Docker Environment
 One thing to get your head around in a Docker implementation is that there are multiple environments 
 where you code runs. The Docker containers that are generated via docker-compose are one environment.
 The local environment as stored within the `venv` folder is another. 
