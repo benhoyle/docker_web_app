@@ -1,0 +1,22 @@
+# Requirements.txt
+# spacy and pytorch are installed separately in the Dockerfile to cache and ensure CUDA support
+fastapi~=0.87.0
+pip~=20.1.1
+anyio~=3.6.2
+sniffio~=1.3.0
+starlette~=0.21.0
+pydantic~=1.10.2
+setuptools~=47.1.0
+# Pytorch with specific version for CUDA support
+--extra-index-url https://download.pytorch.org/whl/cu113
+torch==1.12.1+cu113
+torchvision==0.13.1+cu113
+torchaudio==0.12.1
+# Spacy with specific version for CUDA support
+spacy[cuda113]
+celery~=5.2.7
+uvicorn~=0.15.0
+# Packages needed for testing
+pytest~=6.2.5
+httpx>=0.23.1
+pytest-celery

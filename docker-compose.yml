@@ -1,0 +1,95 @@
+# Production Docker compose file
+version: '3.8'
+
+services:
+    # Nginx as a reverse proxy (front end for requests to server)
+    web:
+        build:
+            context: compose/nginx
+            dockerfile: Dockerfile
+        image: nginx_web_img
+        ports:
+            - "80:80"
+            - "443:443"
+        depends_on:
+            - api
+        # Map certificate path to the nginx container
+        volumes:
+            - ${SSL_PATH}:/etc/ssl/certs/
+
+    # FastAPI server
+    api:
+        # Build using the api Dockerfile
+        build:
+            context: .
+            dockerfile: compose/api/Dockerfile
+        image: api_img
+        command: uvicorn api.main:app --host 0.0.0.0 --port 8080
+        environment:
+            BROKER_URI: amqp://celery_broker:5672
+            BACKEND_URI: redis://celery_results_backend:6379
+            PORT: 8080
+            # SpaCy variables
+            SPACY_MODEL: "en_core_web_trf"
+            GPU_ENABLED: "True"
+            # Change this to false when deploying to production
+            DEBUG_MODE: "True"
+        ports:
+            - "8080:8080"
+        depends_on:
+            - celery_broker
+            - celery_results_backend
+        # Allow access to the GPU(s) on the host machine
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - capabilities: [ gpu ]
+
+    # RabbitMQ server (message broker for celery)
+    celery_broker:
+        image: rabbitmq:latest
+        # Expose the message broker port
+        ports:
+          - "5672:5672"
+        # Set up a named volume to help manage images that are created
+        volumes:
+            - rabbitmq_data:/var/lib/rabbitmq
+
+    celery_results_backend:
+        image: redis:latest
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+
+    # Celery worker (connects to message broker and runs tasks)
+    worker:
+        build:
+            context: .
+            dockerfile: compose/api/Dockerfile
+        image: celery_worker_img
+        environment:
+            BROKER_URI: amqp://celery_broker:5672
+            BACKEND_URI: redis://celery_results_backend:6379
+            # SpaCy variables
+            SPACY_MODEL: "en_core_web_trf"
+            GPU_ENABLED: "True"
+            # Change this to false when deploying to production
+            DEBUG_MODE: "True"
+        # Start a single celery worker - solo for GPU use
+        command: celery -A api.celery_tasks worker --loglevel=INFO -n worker1@%h -P solo
+        # Allow access to the GPU(s) on the host machine
+        depends_on:
+            -  celery_broker
+            -  celery_results_backend
+        deploy:
+            resources:
+                reservations:
+                    devices:
+                        - capabilities: [ gpu ]
+
+volumes:
+    api_cache:
+    rabbitmq_data:
+    redis_data:
